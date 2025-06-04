@@ -1,4 +1,4 @@
-# EdgeTPU
+# Edge TPU
 from pycoral.utils.edgetpu import make_interpreter 
 import cv2
 import numpy as np
