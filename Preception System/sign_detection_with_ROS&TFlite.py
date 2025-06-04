@@ -15,7 +15,7 @@ class SignDetectionNode(Node):
         self.get_logger().info(f'{self.get_name()} initialized.')
 
         # Model's weights and activations have to be int8!!!!
-        MODEL_PATH = '/path/to/your/.tflite file/'
+        MODEL_PATH = '/path/to/your/.tflite model'
         
         self.CONFIDENCE_THRESHOLD = 0.7 
         self.NMS_IOU_THRESHOLD = 0.4
