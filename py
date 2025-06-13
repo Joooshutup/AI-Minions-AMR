@@ -8,25 +8,52 @@ import cv2
 import numpy as np
 import time
 
-# 移除 tensorflow，改為引入 torch
+# 引入 torch 和 torchvision
 import torch
+import torch.nn as nn
 import torchvision.ops as ops
+
+# <--- !!! 使用者需要修改這裡 !!! ---
+# 這是模型架構的「範例」。您必須將它換成您自己模型真正的 Python 類別定義。
+# 您可以將模型的 class 直接貼在這裡，或是從另一個 .py 檔案 import。
+# 例如: from your_model_file import YourActualModel
+class SignDetectionModel(nn.Module):
+    def __init__(self, num_classes):
+        super(SignDetectionModel, self).__init__()
+        # 這裡只是範例層，請換成您模型的真實架構
+        self.backbone = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.head = nn.Linear(16 * 320 * 320, num_classes + 5) # 尺寸需匹配
+        self.get_logger().warn("正在使用一個「範例」模型架構，請務必替換成您自己的模型定義！")
+
+    def forward(self, x):
+        # 這裡只是範例，請換成您模型的真實前向傳播邏輯
+        x = self.backbone(x)
+        x = x.view(x.size(0), -1) 
+        return self.head(x)
+    
+    # 輔助函數，避免 ROS 2 logger 在類別定義階段無法使用
+    def get_logger(self):
+        return rclpy.logging.get_logger("SignDetectionModel_placeholder")
+# --- 以上區塊需要您整個替換 ---
+
 
 class SignDetectionNode(Node):
     def __init__(self):
         super().__init__('sign_detection_node')
         self.get_logger().info(f'{self.get_name()} initialized.')
 
-        # --- PyTorch 模型設定 ---
-        # 確保此路徑指向您的 .pt 或 .pth 模型檔案
-        MODEL_PATH = '/path/to/your/yolov5.pt' # <--- 修改此處
+        # --- 模型與路徑設定 ---
+        # <--- 修改此處: 路徑現在應指向只包含「權重」的 .pth 或 .pt 檔案
+        MODEL_PATH = '/path/to/your/model_weights.pth' 
         self.CONFIDENCE_THRESHOLD = 0.6
         self.NMS_IOU_THRESHOLD = 0.4
-
-        # 根據您的模型手動設定輸入尺寸
-        # 大多數 YOLO 模型的輸入尺寸是正方形，例如 640x640
-        self.input_height = 640 # <--- 修改此處
-        self.input_width = 640  # <--- 修改此處
+        
+        self.input_height = 640
+        self.input_width = 640
         
         self.labels = [
             "Obstacle", "Gate Down", "Gate Up", "Green Light", "Left", "No Entry",
@@ -35,21 +62,23 @@ class SignDetectionNode(Node):
         self.get_logger().info(f"Using {len(self.labels)} hardcoded labels: {self.labels}")
 
         try:
-            # --- 模型加載與設定 ---
-            # 自動檢測並選擇設備 (GPU or CPU)
+            # --- 安全的模型加載與設定 (推薦作法) ---
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.get_logger().info(f"Using device: {self.device}")
             
-            # 加載模型並移至指定設備
-            self.model = torch.load(MODEL_PATH, map_location=self.device)['model'].float()
-            self.model.eval() # 設置為評估模式
+            # 1. 創建模型架構的實例
+            # <--- 修改此處: 確保使用您自己的模型類別
+            self.model = SignDetectionModel(num_classes=len(self.labels))
             
-            # (可選) 對於 half-precision (FP16) 推理，如果您的 GPU 支持
-            # if self.device.type != 'cpu':
-            #     self.model.half()
+            # 2. 加載權重到模型中 (最安全的方式)
+            self.model.load_state_dict(torch.load(MODEL_PATH, map_location=self.device))
+            
+            # 3. 將模型移至設備並設置為評估模式
+            self.model.to(self.device)
+            self.model.eval()
 
         except Exception as e:
-            self.get_logger().error(f"Error loading PyTorch model from {MODEL_PATH}: {e}")
+            self.get_logger().error(f"Error loading model from {MODEL_PATH}: {e}", exc_info=True)
             if rclpy.ok(): rclpy.shutdown()
             return
 
@@ -58,7 +87,7 @@ class SignDetectionNode(Node):
         self.sign_pub = self.create_publisher(String, '/sign_detections', 10)
         self.bridge = CvBridge()
         
-        self.get_logger().info("--- PyTorch 辨識節點初始化成功!! ---")
+        self.get_logger().info("--- PyTorch 辨識節點初始化成功 (使用安全加載模式) ---")
 
     def image_callback(self, msg: Image):
         try:
@@ -73,32 +102,22 @@ class SignDetectionNode(Node):
 
         original_height, original_width = cv_image.shape[:2]
 
-        # --- 圖像預處理 ---
         img_resized = cv2.resize(cv_image, (self.input_width, self.input_height))
         img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
         
-        # 轉換為 PyTorch Tensor: [H, W, C] -> [C, H, W]
-        # 並將 uint8 (0-255) 轉為 float32 (0.0-1.0)
         input_tensor = torch.from_numpy(img_rgb).to(self.device)
         input_tensor = input_tensor.float() / 255.0
-        # if self.model.fp16:
-        #     input_tensor = input_tensor.half()
         input_tensor = input_tensor.permute(2, 0, 1).unsqueeze(0)
 
-        # --- 推理 ---
         with torch.no_grad():
-            # 模型的輸出格式可能需要根據您的具體模型進行調整
-            # YOLOv5/v7 的輸出通常是一個包含 [batch, num_predictions, 85] 的 list
-            predictions = self.model(input_tensor, augment=False)[0]
+            # 推理的輸出格式，可能需要依您的真實模型微調
+            predictions = self.model(input_tensor)[0]
 
-        # --- 後處理 ---
-        # 從 GPU 移回 CPU 進行後續處理
         predictions = predictions.cpu()
         
         boxes, confidences, class_ids = [], [], []
 
         for det in predictions:
-            # 解析 box, confidence, 和 class scores
             obj_score = det[4]
             if obj_score > self.CONFIDENCE_THRESHOLD:
                 class_scores = det[5:]
@@ -106,7 +125,6 @@ class SignDetectionNode(Node):
                 confidence = obj_score * class_scores[class_id]
                 
                 if confidence > self.CONFIDENCE_THRESHOLD:
-                    # 將正規化的座標轉換回原始圖像尺寸
                     center_x, center_y, w, h = det[0:4]
                     x1 = (center_x - w / 2) * original_width
                     y1 = (center_y - h / 2) * original_height
@@ -117,9 +135,7 @@ class SignDetectionNode(Node):
                     confidences.append(float(confidence))
                     class_ids.append(int(class_id))
 
-        # 使用 torchvision 的 NMS
         if boxes:
-            # NMS 需要 torch.Tensor
             boxes_tensor = torch.tensor(boxes, dtype=torch.float32)
             confidences_tensor = torch.tensor(confidences, dtype=torch.float32)
             
@@ -146,7 +162,6 @@ def main(args=None):
     node = None
     try:
         node = SignDetectionNode()
-        # 檢查模型是否成功加載
         if not hasattr(node, 'model'):
             if rclpy.ok(): rclpy.shutdown()
             return
