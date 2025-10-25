@@ -36,19 +36,7 @@ AI Minions AMR 是一款基於 TurtleBot3 Burger 的自主移動機器人，外�
   <img src="Pics/Raspberry Pi 4.jpg" width="30%">
 </p> 執行感知、導航與控制節點，是整體系統的運算核心。 
 
-軟體設備
-Ubuntu 22.04
-ROS2 Humble
-Gazebo
-影像處理:
-OpenCV 4.11.0.86
-
-影像辨識
-RTX 3060ti Yolo模型訓練
-Yolov5
-Roboflow標注資料
-13 classes, 2112 images
-
+## 本次專案的軟體工具：
 | 軟體 / 工具                       | 用途                                         |
 | ----------------------------- | ----------------------------------------------- |
 | **Ubuntu 22.04 LTS**         | 作業系統                                  |
