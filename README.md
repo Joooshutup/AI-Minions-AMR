@@ -36,7 +36,7 @@ AI Minions AMR 是一款基於 TurtleBot3 Burger 的自主移動機器人，外�
   <img src="Pics/Raspberry Pi 4.jpg" width="30%">
 </p> 執行感知、導航與控制節點，是整體系統的運算核心。 
 
-## 本次專案的軟體工具：
+## 本專案的軟體工具：
 | 軟體 / 工具                       | 用途                                         |
 | ----------------------------- | ----------------------------------------------- |
 | **Ubuntu 22.04 LTS**         | 作業系統                                  |
@@ -48,3 +48,5 @@ AI Minions AMR 是一款基於 TurtleBot3 Burger 的自主移動機器人，外�
 | **SLAM**                      | 建立環境地圖並輔助定位與導航                                  |
 | **Gazebo**                    | 模擬環境搭配 `turtlebot3_world` 進行前期測試與演算法驗證          |
 | **VSCode + Colcon Workspace** | 開發與編譯環境，支援多套件建構與即時偵錯                            |
+
+
