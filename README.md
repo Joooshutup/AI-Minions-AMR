@@ -83,8 +83,8 @@ AI Minions AMR 是一款基於 TurtleBot3 Burger 的自主移動機器人，外�
 
 ## 📡 感測器整合 (Sensor Integration)
 系統同時整合多個 ROS Topic：
-<p align="center"> <img src="Pics/Scan.png" width="100%"> <br> <em>/scan：用於避障、停車與黑箱區判斷。</em></p> 
-<p align="center"> <img src="Pics/Odom.png" width="100%"> <br> <em>/odom：提供機器人的位置與朝向資訊，支援精確控制行進距離與旋轉角度。</em> </p> 
+<p align="center"> <img src="Pics/Scan.png" width="80%"> <br> <em>/scan：用於避障、停車與黑箱區判斷。</em></p> 
+<p align="center"> <img src="Pics/Odom.png" width="80%"> <br> <em>/odom：提供機器人的位置與朝向資訊，支援精確控制行進距離與旋轉角度。</em> </p> 
 
 ## 🧭 導航功能 (Navigation)
 <p align="center"> <img src="Pics/Navigation.png" width="100%"> </p>  
