@@ -2,13 +2,12 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
-import time # 標準 time 模組
+import time
 
 class GateHandlerNode(Node):
     def __init__(self):
         super().__init__('gate_handler_node')
 
-        # ROS 參數
         self.declare_parameter('normal_speed', 0.1)       # 正常行駛速度 (m/s) - 柵欄升起後的目標速度
         self.declare_parameter('approach_speed', 0.03)    # 接近柵欄時的慢速 (m/s)
         self.declare_parameter('stop_duration_at_gate', 0.5) # 到達柵欄前，以慢速行駛的持續時間 (秒)，確保停在柵欄前
@@ -40,11 +39,10 @@ class GateHandlerNode(Node):
 
         self.state_timer_start_time = None # 用於計時狀態持續時間
 
-        # ROS 通訊
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.sign_subscriber = self.create_subscription(
             String,
-            '/sign_detections', # 訂閱號誌辨識結果
+            '/sign_detections',
             self.sign_callback,
             10
         )
